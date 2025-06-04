@@ -1,0 +1,64 @@
+.gestion-ressources-container {
+    padding: 20px;
+}
+
+.gestion-card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.custom-datatable {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table-column {
+    font-size: 14px;
+    color: #1f2a44;
+}
+
+.folder-icon {
+    color: #1890ff;
+}
+
+.refresh-button {
+    font-size: 14px;
+}
+
+/* Styles pour les boutons modernes */
+.modern-edit-button {
+    background-color: #40c057 !important; /* Vert moderne pour Modifier */
+    border-color: #40c057 !important;
+    transition: all 0.3s ease;
+    padding: 4px 12px;
+}
+
+.modern-edit-button:hover {
+    background-color: #36a848 !important;
+    border-color: #36a848 !important;
+    transform: translateY(-1px);
+}
+
+.modern-delete-button {
+    background-color: #ff4d4f !important; /* Rouge moderne pour Supprimer */
+    border-color: #ff4d4f !important;
+    transition: all 0.3s ease;
+    padding: 4px 12px;
+}
+
+.modern-delete-button:hover {
+    background-color: #e63946 !important;
+    border-color: #e63946 !important;
+    transform: translateY(-1px);
+}
+
+/* Style pour l'icône de suppression */
+.delete-icon {
+    color: white !important; /* Icône en blanc */
+}
+
+/* Ajustement des icônes */
+.modern-edit-button .pi,
+.modern-delete-button .pi {
+    vertical-align: middle;
+}
