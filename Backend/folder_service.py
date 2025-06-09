@@ -896,6 +896,36 @@ def generate_excel_file():
             # Traitement très simplifié des destinations
             row = 2
             
+            # Fonction pour calculer l'intersection entre deux polylignes
+            def calculate_intersection(poly1, poly2):
+                try:
+                    # Convertir les sommets en objets Point
+                    from shapely.geometry import Polygon
+                    
+                    # Créer les polygones à partir des sommets
+                    poly1_pts = [(v['x'], v['y']) for v in poly1.get('vertices', [])]
+                    poly2_pts = [(v['x'], v['y']) for v in poly2.get('vertices', [])]
+                    
+                    if len(poly1_pts) < 3 or len(poly2_pts) < 3:
+                        return 0.0
+                        
+                    poly1_shapely = Polygon(poly1_pts)
+                    poly2_shapely = Polygon(poly2_pts)
+                    
+                    # Vérifier si les polygones sont valides
+                    if not poly1_shapely.is_valid or not poly2_shapely.is_valid:
+                        return 0.0
+                    
+                    # Calculer l'intersection
+                    intersection = poly1_shapely.intersection(poly2_shapely)
+                    
+                    # Retourner l'aire de l'intersection
+                    return intersection.area
+                    
+                except Exception as e:
+                    logger.warning(f"Erreur lors du calcul d'intersection: {str(e)}")
+                    return 0.0
+            
             # Dictionnaire de correspondance pour les cas spéciaux
             special_cases = {
                 "AUTRE_BUREAU": "Autre bureau",
@@ -1042,8 +1072,15 @@ def generate_excel_file():
                 'cree_changement': {}, # Surface créée par changement de destination
                 'demolie': {},         # Surface démolie reconstruite
                 'supprimee': {},       # Surface supprimée (D)
-                'supprimee_changement': {} # Surface supprimée par changement de destination
+                'supprimee_changement': {}, # Surface supprimée par changement de destination
+                'demolition': {}       # Pour les surfaces de démolition par destination
             }
+            
+            # Identifier les polylignes de démolition (GEX_EDS_TA_SDP_CAHIER_DEMO)
+            demolition_polylines = [p for p in existant_polylines 
+                                 if 'GEX_EDS_TA_SDP_CAHIER_DEMO' in p.get('layer', '')]
+            
+            logger.info(f"Nombre de polylignes de démolition trouvées: {len(demolition_polylines)}")
             
             # Traiter les polylignes existantes (Projet_demoli_feuille_TA.dxf)
             main_existant_polylines = []
@@ -1058,8 +1095,17 @@ def generate_excel_file():
                         area = calculate_area(polyline)
                         if destination not in calculation_results['existant']:
                             calculation_results['existant'][destination] = 0
+                            calculation_results['demolition'][destination] = 0.0
                         calculation_results['existant'][destination] += area
                         logger.info(f"Existant: Destination {destination} - ajout surface {area}")
+                        
+                        # Calculer l'intersection avec les zones de démolition
+                        for demo_poly in demolition_polylines:
+                            intersection_area = calculate_intersection(polyline, demo_poly)
+                            if intersection_area > 0:
+                                calculation_results['demolition'][destination] += intersection_area
+                                logger.info(f"  - Intersection avec zone de démolition: {intersection_area:.2f} m²")
+                                
                 elif is_special_layer(layer):
                     special_existant_polylines.append(polyline)
             
@@ -1207,10 +1253,21 @@ def generate_excel_file():
                 logger.info(f"Destination {formatted_destination} - Surface existante: {existant_surface}, Surface projet: {projet_surface}")
                 
                 # Surface existante avec précision identique au fichier attendu
-                ws[f'C{row}'] = existant_surface if existant_surface > 0 else 0
+                if existant_surface > 0:
+                    ws[f'C{row}'] = existant_surface
                 
                 # Surface projet avec précision identique au fichier attendu
-                ws[f'I{row}'] = projet_surface if projet_surface > 0 else 0
+                if projet_surface > 0:
+                    ws[f'I{row}'] = projet_surface
+                
+                # Remplir la colonne Surface démolie (F) uniquement si > 0
+                demolition_surface = calculation_results['demolition'].get(destination, 0)
+                if demolition_surface > 0:
+                    ws[f'F{row}'] = demolition_surface
+                
+                # Journaliser les résultats pour débogage
+                logger.info(f"Destination {formatted_destination} - Surface existante: {existant_surface}, "
+                           f"Surface projet: {projet_surface}, Surface démolie: {demolition_surface}")
                 
                 row += 1
             
